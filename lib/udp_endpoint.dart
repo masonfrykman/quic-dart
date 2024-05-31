@@ -43,6 +43,8 @@ class UDPEndpoint {
   // * Socket listener mgmt *
   // ************************
 
+  bool get isListening => _bindedSocket != null;
+
   Future<void> startListening() async {
     _bindedSocket = await RawDatagramSocket.bind(_host, _port);
     _connectionListener = _bindedSocket!.listen((event) => _eventProcessor(event), onDone: () async => await stopListening());
