@@ -21,54 +21,97 @@ class UDPEndpoint {
   dynamic get host => _host;
   int get port => _port;
 
+  /// Sets the host that's binded to.  This will cause the listener and socket to close.
+  ///
+  /// If [restartListening] is set to true, , it will call [bind] and [startListening]. Otherwise, it will leave the socket open and [bind] must be called seperately.
   Future<void> setHost(dynamic newValue, {bool restartListening = true}) async {
     await stopListening();
+    await unbind();
     _host = newValue;
-    if(restartListening) {
+    if (restartListening) {
       await startListening();
     }
   }
 
+  /// Sets the port that's binded to. This will cause the listener and socket to close.
+  ///
+  /// If [restartListening] is set to true, it will call [bind] and [startListening]. Otherwise, it will leave the socket open and [bind] must be called seperately.
   Future<void> setPort(int newValue, {bool restartListening = true}) async {
     await stopListening();
+    await unbind();
     _port = newValue;
-    if(restartListening) {
+    if (restartListening) {
       await startListening();
     }
   }
 
   UDPEndpoint(this._host, this._port);
 
+  // ******************
+  // * Socket binding *
+  // ******************
+
+  bool get isBinded => _bindedSocket != null;
+
+  Future<void> bind() async {
+    if (_bindedSocket != null) {
+      return;
+    }
+    _bindedSocket = await RawDatagramSocket.bind(_host, _port);
+  }
+
+  Future<bool> unbind() async {
+    if (_bindedSocket != null) {
+      _bindedSocket!.close();
+      _bindedSocket = null;
+      return true;
+    }
+    return false;
+  }
+
   // ************************
   // * Socket listener mgmt *
   // ************************
 
-  bool get isListening => _bindedSocket != null;
+  bool get isListening => _connectionListener != null;
 
+  /// Starts listening to the binded socket.
+  ///
+  /// If the socket is not binded, it will attempt to bind.
+  ///
+  /// Passes any datagrams recieved to [delegate] using the [UDPEndpointDelegate.endpointRecievedData] method. Otherwise, data is practically thrown away.
   Future<void> startListening() async {
-    _bindedSocket = await RawDatagramSocket.bind(_host, _port);
-    _connectionListener = _bindedSocket!.listen((event) => _eventProcessor(event), onDone: () async => await stopListening());
+    await bind();
+    _connectionListener = _bindedSocket!.listen(
+        (event) => _eventProcessor(event),
+        onDone: () async => await stopListening());
+
+    if (_writeQueue.isNotEmpty) {
+      _bindedSocket!.writeEventsEnabled =
+          true; // Ensure data starts getting sent.
+    }
   }
 
   void _eventProcessor(RawSocketEvent event) {
-    switch(event) {
+    switch (event) {
       case RawSocketEvent.read:
+        if (!isBinded) break;
         Datagram? packet = _bindedSocket!.receive();
-        if(packet == null) break;
+        if (packet == null) break;
 
         delegate?.endpointRecievedData(this, packet);
         break;
       case RawSocketEvent.write:
-        if(_bindedSocket == null || _writeQueue.isEmpty) {
-          break;
-        }
+        if (!isBinded || _writeQueue.isEmpty) break;
 
-        var sendCall = _bindedSocket!.send(_writeQueue.first.$1, _writeQueue.first.$2, _writeQueue.first.$3);
-        if(sendCall > 0) { // Success
+        var sendCall = _bindedSocket!.send(
+            _writeQueue.first.$1, _writeQueue.first.$2, _writeQueue.first.$3);
+        if (sendCall > 0) {
+          // Success
           _writeQueue.removeAt(0);
         }
 
-        if(_writeQueue.isNotEmpty) {
+        if (_writeQueue.isNotEmpty) {
           _bindedSocket!.writeEventsEnabled = true;
         }
         break;
@@ -77,28 +120,27 @@ class UDPEndpoint {
     }
   }
 
+  /// Closes the listener, if it exists.
   Future<bool> stopListening() async {
-    bool wasListening = false;
-    if(_connectionListener != null) {
+    if (isListening) {
       await _connectionListener!.cancel();
       _connectionListener = null;
-      wasListening = true;
+      return true;
     }
-    if(_bindedSocket != null) {
-      _bindedSocket!.close();
-      _bindedSocket = null;
-      wasListening = true;
-    }
-    return wasListening;
+    return false;
   }
 
+  /// Sends a datagram of data to a host and port.
+  ///
+  /// The parameters are added to a queue that is sent on a first come, first serve basis as [RawSocketEvent.write] events are fired on the listener.
+  ///
+  /// If [isListening] is false, the data will not be sent until the listener starts.
   void write(Uint8List data, dynamic to, int toPort) {
     _writeQueue.add((data, to, toPort));
-    if(_bindedSocket != null) {
+    if (isBinded) {
       _bindedSocket!.writeEventsEnabled = true;
     }
   }
-  
 }
 
 mixin UDPEndpointDelegate {
