@@ -6,7 +6,6 @@ class UDPEndpoint {
   // Controlled by the class.
   RawDatagramSocket? _bindedSocket;
   StreamSubscription<RawSocketEvent>? _connectionListener;
-  UDPEndpointDelegate? delegate;
 
   List<(Uint8List data, dynamic host, int port)> _writeQueue = [];
   int _writeFailures = 0;
@@ -15,16 +14,22 @@ class UDPEndpoint {
   dynamic _host;
   int _port;
 
+  /// The delegate of the endpoint. The listener will use these methods to inform of incoming data ([UDPEndpointDelegate.endpointRecievedData]) and write failures ([UDPEndpointDelegate.endpointFailedToSend]).
+  UDPEndpointDelegate? delegate;
+
   // ********************
   // * Host & Port mgmt *
   // ********************
 
+  /// Host that is used to bind the socket. Use [setHost] to set this parameter after construction.
   dynamic get host => _host;
+
+  /// Port that is used to bind the socket. Use [setPort] to set this parameter after construction.
   int get port => _port;
 
   /// Sets the host that's binded to.  This will cause the listener and socket to close.
   ///
-  /// If [restartListening] is set to true, , it will call [bind] and [startListening]. Otherwise, it will leave the socket open and [bind] must be called seperately.
+  /// If [restartListening] is set to true, it will call [bind] and [startListening]. Otherwise, it will leave the socket open and [bind] must be called seperately.
   Future<void> setHost(dynamic newValue, {bool restartListening = true}) async {
     await stopListening();
     await unbind();
@@ -52,8 +57,10 @@ class UDPEndpoint {
   // * Socket binding *
   // ******************
 
+  /// Whether the socket is binded to. Use [bind] to bind the socket to the [host] and [port].
   bool get isBinded => _bindedSocket != null;
 
+  /// Binds to the socket using [host] and [port].
   Future<void> bind() async {
     if (_bindedSocket != null) {
       return;
@@ -61,7 +68,9 @@ class UDPEndpoint {
     _bindedSocket = await RawDatagramSocket.bind(_host, _port);
   }
 
+  /// Unbinds the socket. The listener will be canceled via [stopListening], if it exists.
   Future<bool> unbind() async {
+    await stopListening();
     if (_bindedSocket != null) {
       _bindedSocket!.close();
       _bindedSocket = null;
