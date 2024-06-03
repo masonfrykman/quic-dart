@@ -9,6 +9,7 @@ class UDPEndpoint {
   UDPEndpointDelegate? delegate;
 
   List<(Uint8List data, dynamic host, int port)> _writeQueue = [];
+  int _writeFailures = 0;
 
   // Provided by constructor.
   dynamic _host;
@@ -80,6 +81,7 @@ class UDPEndpoint {
   /// If the socket is not binded, it will attempt to bind.
   ///
   /// Passes any datagrams recieved to [delegate] using the [UDPEndpointDelegate.endpointRecievedData] method. Otherwise, data is practically thrown away.
+  /// To send data, use the [write] method. Any datagrams that can't be sent (fail 3 times) will be sent back to the [delegate] using the [UDPEndpointDelegate.endpointFailedToSend] method.
   Future<void> startListening() async {
     await bind();
     _connectionListener = _bindedSocket!.listen(
@@ -104,11 +106,20 @@ class UDPEndpoint {
       case RawSocketEvent.write:
         if (!isBinded || _writeQueue.isEmpty) break;
 
+        if (_writeFailures >= 3) {
+          delegate?.endpointFailedToSend(this, _writeQueue.first);
+          _writeQueue.removeAt(0);
+        }
+
         var sendCall = _bindedSocket!.send(
             _writeQueue.first.$1, _writeQueue.first.$2, _writeQueue.first.$3);
         if (sendCall > 0) {
           // Success
           _writeQueue.removeAt(0);
+          _writeFailures = 0;
+        } else {
+          // Failure, retry. (up to 3 times)
+          _writeFailures++;
         }
 
         if (_writeQueue.isNotEmpty) {
@@ -145,4 +156,6 @@ class UDPEndpoint {
 
 mixin UDPEndpointDelegate {
   void endpointRecievedData(UDPEndpoint endpoint, Datagram data);
+  void endpointFailedToSend(UDPEndpoint endpoint,
+      (Uint8List data, dynamic host, int port) problematicParameters);
 }
