@@ -109,6 +109,7 @@ class UDPEndpoint {
         if (_writeFailures >= 3) {
           delegate?.endpointFailedToSend(this, _writeQueue.first);
           _writeQueue.removeAt(0);
+          _writeFailures = 0;
         }
 
         var sendCall = _bindedSocket!.send(
