@@ -95,7 +95,9 @@ class UDPEndpoint {
     await bind();
     _connectionListener = _bindedSocket!.listen(
         (event) => _eventProcessor(event),
-        onDone: () async => await stopListening());
+        onDone: () async => await stopListening(),
+        onError: (error) => delegate?.endpointListenerError(this, error),
+        cancelOnError: false);
 
     if (_writeQueue.isNotEmpty) {
       _bindedSocket!.writeEventsEnabled =
@@ -165,7 +167,13 @@ class UDPEndpoint {
 }
 
 mixin UDPEndpointDelegate {
+  /// Handler for data recieved by an endpoint.
   void endpointRecievedData(UDPEndpoint endpoint, Datagram data);
+
+  /// Called when [RawDatagramSocket.send] returns 0 three times, meaning that there's a problem with the parameters.
   void endpointFailedToSend(UDPEndpoint endpoint,
       (Uint8List data, dynamic host, int port) problematicParameters);
+
+  /// Called when [StreamSubscription.onError] is called. This handler being called does not mean the listener has canceled.
+  void endpointListenerError(UDPEndpoint endpoint, Object error);
 }
