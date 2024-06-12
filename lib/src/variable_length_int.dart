@@ -31,7 +31,6 @@ class VarInt {
       int restrictedNumRep = 0;
       for (int n = (i == 0 ? 5 : 7); n >= 0; n--) {
         int place = pow(2, power) as int;
-        print(place);
         if (initial / place >= 1) {
           initial -= place;
           restrictedNumRep += pow(2, n) as int;
