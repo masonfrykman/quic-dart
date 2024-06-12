@@ -30,6 +30,8 @@ class VarInt {
     for (int i = 0; i < data.length; i++) {
       int restrictedNumRep = 0;
       for (int n = (i == 0 ? 5 : 7); n >= 0; n--) {
+        // The weird tertiary operator above ensures the first two MSBs stay
+        // open for the encoding described in RFC 9000 section 16.
         int place = pow(2, power) as int;
         if (initial / place >= 1) {
           initial -= place;
