@@ -9,16 +9,16 @@ class VarInt {
   VarInt.fromInt(int initial, {int msbOverride = -1}) {
     msb = msbOverride == -1 ? getSmallestEncodingMSB(initial) : msbOverride;
     switch (msb) {
-      case 0:
+      case 0: // 6-bit integer
         data = Uint8List(1);
         break;
-      case 1:
+      case 1: // 14-bit integer
         data = Uint8List(2);
         break;
-      case 2:
+      case 2: // 30-bit integer
         data = Uint8List(4);
         break;
-      case 3:
+      case 3: // 62-bit integer
         data = Uint8List(8);
         break;
       default:
