@@ -22,7 +22,7 @@ class VarInt {
         data = Uint8List(8);
         break;
       default:
-        throw 'Invalid MSB return. Number too big? Negative?';
+        throw 'Invalid MSB return "$msb". Number too big? Negative?';
     }
 
     // Calculate bits
@@ -52,7 +52,6 @@ class VarInt {
           here -= pow(2, i) as int;
           count += pow(2, (8 * (data.length - di - 1)) + i) as int;
         }
-        print("$i: $count, $here");
       }
     }
     return count;

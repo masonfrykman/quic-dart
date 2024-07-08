@@ -1,10 +1,10 @@
 import 'dart:typed_data';
 
-import 'package:quic/src/variable_length_int.dart';
+import 'variable_length_int.dart';
+import 'stream_enums.dart';
 
 class QUICStream {
   VarInt? id;
-
   StreamInitiator initiator;
   StreamDirection direction;
 
@@ -12,28 +12,25 @@ class QUICStream {
   RecvStreamState? recvState;
 
   StreamPriority priority;
+
+  final List<int> _dataRecieved = [];
+  List<int>? get dataRecieved =>
+      recvState == RecvStreamState.recievedAll ? _dataRecieved : null;
+
+  QUICStream(this.direction, this.initiator,
+      {this.sendState, this.recvState, this.id, required this.priority});
+
+  void recieve(Uint8List data, VarInt offset) {
+    if (data.isEmpty) return;
+
+    // TODO: Restrict this function by the recvState
+
+    int offsetInt = offset.toInt();
+    if (offsetInt + data.length > _dataRecieved.length) {
+      _dataRecieved.addAll(List.filled(
+          (_dataRecieved.length - data.length - offsetInt) * -1, 0));
+    }
+
+    _dataRecieved.replaceRange(offsetInt, offsetInt + data.length, data);
+  }
 }
-
-enum StreamInitiator { client, server }
-
-enum StreamDirection { unidirectional, bidirectional }
-
-enum SendStreamState {
-  ready,
-  sending,
-  sentFin,
-  allDataRecieved,
-  sentReset,
-  resetRecieved
-}
-
-enum RecvStreamState {
-  recieve,
-  sizeKnown,
-  recievedAll,
-  recievedReset,
-  appReadAllData,
-  appReadReset
-}
-
-enum StreamPriority { low, normal, high, critical }
