@@ -43,6 +43,21 @@ class VarInt {
     }
   }
 
+  int toInt() {
+    int count = 0;
+    for (int di = 0; di < data.length; di++) {
+      int here = data[di];
+      for (int i = (di == 0 ? 5 : 7); i >= 0; i--) {
+        if (pow(2, i) <= here) {
+          here -= pow(2, i) as int;
+          count += pow(2, (8 * (data.length - di - 1)) + i) as int;
+        }
+        print("$i: $count, $here");
+      }
+    }
+    return count;
+  }
+
   static int getSmallestEncodingMSB(int value) {
     if (value < 0) {
       return -1;
@@ -57,4 +72,13 @@ class VarInt {
     }
     return -1;
   }
+}
+
+void main(List<String> args) {
+  var x = VarInt.fromInt(13);
+  var y = VarInt.fromInt(3029);
+  print(x.data);
+  print(x.toInt());
+  print(y.data);
+  print(y.toInt());
 }
