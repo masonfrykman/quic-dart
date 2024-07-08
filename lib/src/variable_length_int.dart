@@ -73,12 +73,3 @@ class VarInt {
     return -1;
   }
 }
-
-void main(List<String> args) {
-  var x = VarInt.fromInt(13);
-  var y = VarInt.fromInt(3029);
-  print(x.data);
-  print(x.toInt());
-  print(y.data);
-  print(y.toInt());
-}
