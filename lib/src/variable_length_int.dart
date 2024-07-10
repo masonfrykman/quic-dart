@@ -1,7 +1,7 @@
 import 'dart:math';
 import 'dart:typed_data';
 
-class VarInt {
+final class VarInt {
   // See RFC 9000 section 16
   late int msb;
   late Uint8List data;
