@@ -43,7 +43,7 @@ final class VarInt {
     }
   }
 
-  int toInt() {
+  int toInt({bool withEncodingBits = false}) {
     int count = 0;
     for (int di = 0; di < data.length; di++) {
       int here = data[di];
@@ -52,6 +52,20 @@ final class VarInt {
           here -= pow(2, i) as int;
           count += pow(2, (8 * (data.length - di - 1)) + i) as int;
         }
+      }
+    }
+
+    if (withEncodingBits) {
+      switch (msb) {
+        case 1:
+          count += pow(2, 6) as int;
+          break;
+        case 2:
+          count += pow(2, 14) as int;
+          break;
+        case 3:
+          count += pow(2, 23) + pow(2, 22) as int;
+          break;
       }
     }
     return count;
